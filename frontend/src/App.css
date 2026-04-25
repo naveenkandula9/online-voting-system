@@ -1,0 +1,145 @@
+.app-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(13, 110, 253, 0.06), rgba(255, 255, 255, 0) 320px),
+    #f8fafc;
+}
+
+.navbar-brand {
+  letter-spacing: 0;
+}
+
+.status-panel {
+  background: #ffffff;
+  border: 1px solid #dee6f2;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.auth-panel {
+  background: #ffffff;
+  border: 1px solid #dee6f2;
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.candidate-option {
+  display: block;
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.candidate-option:hover,
+.candidate-option.selected {
+  border-color: #0d6efd;
+  box-shadow: 0 10px 24px rgba(13, 110, 253, 0.12);
+}
+
+.candidate-option:hover {
+  transform: translateY(-1px);
+}
+
+.candidate-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.candidate-card {
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  padding: 1rem;
+  text-align: center;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.candidate-card:hover,
+.candidate-card.selected {
+  border-color: #0d6efd;
+  box-shadow: 0 16px 34px rgba(13, 110, 253, 0.15);
+  transform: translateY(-2px);
+}
+
+.candidate-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.candidate-card-body {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-height: 190px;
+}
+
+.party-symbol {
+  height: 80px;
+  margin-bottom: 1rem;
+  max-height: 80px;
+  max-width: 120px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.candidate-name {
+  color: #111827;
+  display: block;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 0.4rem;
+}
+
+.candidate-party {
+  color: #0d6efd;
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 0.25rem;
+}
+
+.candidate-state {
+  color: #64748b;
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.chart-box {
+  min-height: 320px;
+}
+
+.activity-row {
+  border-bottom: 1px solid #e5edf7;
+}
+
+.activity-row:last-child {
+  border-bottom: 0;
+}
+
+.page-header {
+  max-width: 760px;
+}
+
+.nav-link.active {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+@media (max-width: 575.98px) {
+  .display-5 {
+    font-size: 2.25rem;
+  }
+
+  .candidate-grid {
+    grid-template-columns: 1fr;
+  }
+}
