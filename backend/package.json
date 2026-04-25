@@ -1,0 +1,39 @@
+{
+  "name": "distributed-online-voting-backend",
+  "version": "1.0.0",
+  "description": "Backend API for a distributed online voting system built with Node.js, Express, and MongoDB Atlas.",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "seed:admin": "node src/scripts/createAdmin.js",
+    "seed:candidates": "node src/scripts/seedCandidates.js",
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "mern",
+    "voting-system",
+    "express",
+    "mongodb",
+    "jwt"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "nodemailer": "^8.0.6",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
