@@ -25,6 +25,14 @@ api.interceptors.response.use(
       error.message ||
       'Something went wrong. Please try again.';
 
+    // Enhanced error logging for debugging
+    console.error('[API Error]', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+      url: error.config?.url,
+    });
+
     return Promise.reject({
       ...error,
       message,
