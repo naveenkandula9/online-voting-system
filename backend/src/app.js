@@ -57,3 +57,11 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 export default app;
+
+
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Online Voting System API is running 🚀"
+  });
+});
