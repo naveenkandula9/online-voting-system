@@ -1,108 +1,154 @@
-# Distributed Online Voting System
+# 🗳️ SecureVote – Online Voting System
 
-Production-ready MERN voting system foundation with OTP registration, JWT login, candidate management, one-user-one-vote enforcement, results, election control, and audit logs.
+A full-stack MERN application for conducting secure digital elections with user authentication, admin control, complaint management, and email notifications.
 
-## Completed Features
+---
 
-- React frontend with routing, protected pages, Bootstrap UI, axios integration
-- Register flow with phone OTP and Aadhaar validation
-- Login flow with JWT stored in `localStorage`
-- Candidate listing and admin candidate CRUD
-- Protected voting API with duplicate vote prevention
-- Candidate/state matching during voting
-- Election start/stop control
-- Dynamic results API and Recharts result charts
-- Admin dashboard for candidates, election control, users, analytics, and logs
-- Activity logs for registration, voting, and admin actions
+## 🚀 Live Demo
 
-## Backend
+👉 (Add your deployed link here after deployment)
 
-```bash
+---
+
+## 📌 Features
+
+### 👤 User Features
+
+* User registration and login
+* Secure authentication using JWT
+* Vote only once (prevents duplicate voting)
+* Search and filter candidates by name, party, and state
+* Raise complaints during elections
+* View complaint status
+* Receive email after successful vote
+
+---
+
+### 👨‍💼 Admin Features
+
+* Add candidates dynamically (name, party, symbol, state)
+* View all candidates with party logos
+* Manage and resolve user complaints
+* Monitor election process
+
+---
+
+### 🔒 Security Features
+
+* JWT-based authentication
+* One-time voting restriction
+* Protected admin routes
+* Backend validation for secure voting
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* React.js
+* Axios
+* Bootstrap / CSS
+
+### Backend
+
+* Node.js
+* Express.js
+
+### Database
+
+* MongoDB Atlas
+
+### Other Tools
+
+* Nodemailer (Email notifications)
+
+---
+
+## 📂 Project Structure
+
+online-voting-system/
+│
+├── frontend/        # React frontend
+├── backend/         # Node.js backend
+└── README.md
+
+---
+
+## ⚙️ Setup Instructions
+
+### 1️⃣ Clone the repository
+
+```bash id="bkv79c"
+git clone https://github.com/YOUR_USERNAME/online-voting-system.git
+cd online-voting-system
+```
+
+---
+
+### 2️⃣ Backend Setup
+
+```bash id="jfrb5m"
 cd backend
 npm install
-copy .env.example .env
 npm run dev
 ```
 
-Backend runs on:
+Create `.env` file:
 
-```text
-http://localhost:5000
+```env id="4vb3g9"
+MONGODB_URI=your_mongodb_uri
+EMAIL_USER=your_email
+EMAIL_PASS=your_app_password
+PORT=5000
 ```
 
-Important `.env` values:
+---
 
-```env
-MONGODB_URI=your_mongodb_atlas_uri
-JWT_ACCESS_SECRET=your_long_access_secret
-JWT_REFRESH_SECRET=your_long_refresh_secret
-CLIENT_ORIGIN=http://localhost:3000
-```
+### 3️⃣ Frontend Setup
 
-Create first admin:
-
-```bash
-cd backend
-npm run seed:admin
-```
-
-## Frontend
-
-```bash
+```bash id="p5qfda"
 cd frontend
 npm install
-copy .env.example .env
 npm start
 ```
 
-Frontend runs on:
+Create `.env` file:
 
-```text
-http://localhost:3000
+```env id="a1eymd"
+REACT_APP_API_BASE_URL=http://localhost:5000
 ```
 
-## Main API Routes
+---
 
-```text
-POST /api/auth/send-otp
-POST /api/auth/verify-otp
-POST /api/auth/register
-POST /api/auth/login
+## 🧪 Usage Flow
 
-GET  /api/candidates
-POST /api/admin/candidate
-PUT  /api/admin/candidate/:id
-DELETE /api/admin/candidate/:id
+1. Register a new account
+2. Login securely
+3. View candidates based on state
+4. Vote for a candidate (only once)
+5. Receive vote confirmation email
+6. Raise complaints if issues occur
+7. Admin reviews and resolves complaints
 
-POST /api/vote
-GET  /api/results
+---
 
-GET  /api/admin/election
-POST /api/admin/election/start
-POST /api/admin/election/stop
-GET  /api/admin/users
-GET  /api/admin/logs
-```
+## 🎯 Future Improvements
 
-## Deployment
+* Real-time voting updates
+* Advanced analytics dashboard
+* Multi-election support
+* Enhanced UI/UX design
 
-Backend on Render:
+---
 
-- Root directory: `backend`
-- Build command: `npm install`
-- Start command: `npm start`
-- Add environment variables from `backend/.env.example`
-- Set `CLIENT_ORIGIN` to your Vercel frontend URL
+## 👨‍💻 Author
 
-Frontend on Vercel:
+**Naveen Kandula**
+B.Tech CSE
 
-- Root directory: `frontend`
-- Build command: `npm run build`
-- Output directory: `build`
-- Add `REACT_APP_API_BASE_URL` with your Render backend URL
+---
 
-## Full Flow
+## 📜 License
 
-```text
-Register -> Send OTP -> Verify OTP -> Complete registration -> Login -> Admin starts election -> User votes -> Results update
-```
+This project is for educational purposes.
