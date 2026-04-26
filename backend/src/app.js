@@ -32,7 +32,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://online-voting-system-5hjive.vercel.app"
+    "https://online-voting-system-rho-five.vercel.app/login"
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
