@@ -1,8 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-
-import { auth } from '../firebase';
 import api from '../services/api';
 
 const initialForm = {
@@ -38,12 +35,11 @@ const calculateAge = (dobValue) => {
 
 const Register = () => {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState(initialForm);
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [firebaseVerification, setFirebaseVerification] = useState(null);
   const [loadingAction, setLoadingAction] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -60,7 +56,6 @@ const Register = () => {
 
     if (formData.dob) {
       const age = calculateAge(formData.dob);
-
       if (age === null) {
         errors.dob = 'Enter a valid date of birth.';
       } else if (age < 18) {
@@ -76,37 +71,29 @@ const Register = () => {
   }, [formData]);
 
   const isFormComplete =
-    formData.name.trim() &&
-    formData.email.trim() &&
-    formData.phone.trim() &&
-    formData.aadhaar.trim() &&
+    formData.name &&
+    formData.email &&
+    formData.phone &&
+    formData.aadhaar &&
     formData.dob &&
-    formData.state.trim() &&
+    formData.state &&
     formData.password;
 
   const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
-  const updateField = (event) => {
-    const { name, value } = event.target;
+  const updateField = (e) => {
+    const { name, value } = e.target;
     const numericFields = ['phone', 'aadhaar'];
-    const nextValue = numericFields.includes(name) ? value.replace(/\D/g, '') : value;
 
-    setFormData((current) => ({
-      ...current,
-      [name]: nextValue,
+    setFormData((prev) => ({
+      ...prev,
+      [name]: numericFields.includes(name) ? value.replace(/\D/g, '') : value,
     }));
 
     if (name === 'phone') {
       setOtp('');
       setOtpSent(false);
       setOtpVerified(false);
-      setConfirmationResult(null);
-      setFirebaseVerification(null);
-
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-      }
     }
   };
 
@@ -114,9 +101,10 @@ const Register = () => {
     setMessage({ type, text });
   };
 
+  // SEND OTP
   const handleSendOtp = async () => {
     if (!/^\d{10}$/.test(formData.phone)) {
-      showMessage('danger', 'Enter a valid 10-digit phone number before sending OTP.');
+      showMessage('danger', 'Enter a valid 10-digit phone number.');
       return;
     }
 
@@ -124,332 +112,350 @@ const Register = () => {
       setLoadingAction('send-otp');
       showMessage('', '');
 
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-      }
+      await api.post('/api/auth/send-otp', {
+        phone: formData.phone,
+      });
 
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        { size: 'invisible' },
-      );
-
-      const appVerifier = window.recaptchaVerifier;
-      const phoneNumber = `+91${formData.phone}`;
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-
-      setConfirmationResult(confirmation);
       setOtpSent(true);
       setOtpVerified(false);
-      setFirebaseVerification(null);
-      window.alert('OTP sent successfully to your mobile');
-      showMessage('success', 'OTP sent successfully to your mobile.');
+      showMessage('success', 'OTP sent! Check backend console for OTP.');
     } catch (error) {
       console.error(error);
-      window.alert('Failed to send OTP');
-      showMessage('danger', 'Failed to send OTP. Please check the phone number and try again.');
+      showMessage(
+        'danger',
+        error.response?.data?.message || 'Failed to send OTP.'
+      );
     } finally {
       setLoadingAction('');
     }
   };
 
+  // VERIFY OTP
   const handleVerifyOtp = async () => {
     if (!/^\d{6}$/.test(otp)) {
       showMessage('danger', 'Enter a valid 6-digit OTP.');
       return;
     }
 
-    if (!confirmationResult) {
-      showMessage('danger', 'Please send OTP before verification.');
-      return;
-    }
-
     try {
       setLoadingAction('verify-otp');
       showMessage('', '');
-      const credential = await confirmationResult.confirm(otp);
-      const idToken = await credential.user.getIdToken();
+
+      await api.post('/api/auth/verify-otp', {
+        phone: formData.phone,
+        otp,
+      });
 
       setOtpVerified(true);
-      setFirebaseVerification({
-        uid: credential.user.uid,
-        phoneNumber: credential.user.phoneNumber,
-        idToken,
-      });
-      window.alert('OTP verified successfully');
-      showMessage('success', 'OTP verified. You can now complete registration.');
+      showMessage('success', 'OTP verified successfully.');
     } catch (error) {
       console.error(error);
       setOtpVerified(false);
-      setFirebaseVerification(null);
-      window.alert('Invalid OTP');
-      showMessage('danger', 'Invalid OTP. Please try again.');
+      showMessage(
+        'danger',
+        error.response?.data?.message || 'Invalid OTP.'
+      );
     } finally {
       setLoadingAction('');
     }
   };
 
-  const handleRegister = async (event) => {
-    event.preventDefault();
+  // REGISTER
+  const handleRegister = async (e) => {
+    e.preventDefault();
 
-    if (!isFormComplete || hasValidationErrors) {
-      showMessage('danger', 'Please complete all fields with valid details.');
-      return;
-    }
-
-    const age = calculateAge(formData.dob);
-
-    if (age === null) {
-      showMessage('danger', 'Enter a valid date of birth.');
-      return;
-    }
-
-    if (age < 18) {
-      window.alert(minimumAgeMessage);
-      showMessage('danger', minimumAgeMessage);
+    if (hasValidationErrors) {
+      showMessage('danger', 'Fix validation errors first.');
       return;
     }
 
     if (!otpVerified) {
-      showMessage('danger', 'Please verify OTP before registration.');
+      showMessage('danger', 'Please verify OTP first.');
       return;
     }
 
     try {
       setLoadingAction('register');
       showMessage('', '');
-      await api.post('/api/auth/register', {
-        ...formData,
-        firebasePhoneVerified: true,
-        firebaseUid: firebaseVerification?.uid,
-        firebasePhoneNumber: firebaseVerification?.phoneNumber,
-        firebaseIdToken: firebaseVerification?.idToken,
-      });
-      showMessage('success', 'Registration successful. Redirecting to login...');
 
-      setTimeout(() => {
-        navigate('/login');
-      }, 900);
+      await api.post('/api/auth/register', formData);
+
+      showMessage('success', 'Registration successful!');
+      setTimeout(() => navigate('/login'), 1000);
     } catch (error) {
-      showMessage('danger', error.message);
+      showMessage(
+        'danger',
+        error.response?.data?.message || error.message
+      );
     } finally {
       setLoadingAction('');
     }
   };
 
   return (
-    <main className="container py-5">
-      <div className="row justify-content-center">
-        <div className="col-lg-8 col-xl-7">
-          <div className="page-header mb-4">
-            <p className="text-primary fw-semibold mb-1">Voter Registration</p>
-            <h1 className="h2 fw-bold">Create your secure voting account</h1>
-            <p className="text-secondary mb-0">
-              Verify your mobile number with OTP, then complete Aadhaar-based registration.
-            </p>
-          </div>
-
-          <form className="auth-panel p-4 p-md-5" onSubmit={handleRegister} noValidate>
-            <div id="recaptcha-container"></div>
-
-            {message.text ? (
-              <div className={`alert alert-${message.type}`} role="alert">
-                {message.text}
-              </div>
-            ) : null}
-
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label" htmlFor="name">
-                  Full name
-                </label>
-                <input
-                  className="form-control"
-                  id="name"
-                  name="name"
-                  onChange={updateField}
-                  placeholder="Enter full name"
-                  required
-                  type="text"
-                  value={formData.name}
-                />
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label" htmlFor="email">
-                  Email
-                </label>
-                <input
-                  className="form-control"
-                  id="email"
-                  name="email"
-                  onChange={updateField}
-                  placeholder="name@example.com"
-                  required
-                  type="email"
-                  value={formData.email}
-                />
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label" htmlFor="phone">
-                  Phone number
-                </label>
-                <div className="input-group">
-                  <input
-                    className={`form-control ${validationErrors.phone ? 'is-invalid' : ''}`}
-                    id="phone"
-                    maxLength="10"
-                    name="phone"
-                    onChange={updateField}
-                    placeholder="10-digit mobile"
-                    required
-                    type="text"
-                    value={formData.phone}
-                  />
-                  <button
-                    className="btn btn-outline-primary"
-                    disabled={loadingAction === 'send-otp' || !/^\d{10}$/.test(formData.phone)}
-                    onClick={handleSendOtp}
-                    type="button"
-                  >
-                    {loadingAction === 'send-otp' ? 'Sending...' : 'Send OTP'}
-                  </button>
-                  {validationErrors.phone ? (
-                    <div className="invalid-feedback d-block">{validationErrors.phone}</div>
-                  ) : null}
+    <main className="min-vh-100 d-flex align-items-center py-5" style={{ backgroundColor: '#f8f9fa' }}>
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-lg-6 col-md-8">
+            <div className="card shadow-lg border-0">
+              <div className="card-body p-5">
+                <div className="text-center mb-5">
+                  <h1 className="h2 fw-bold mb-2">Voter Registration</h1>
+                  <p className="text-muted">Create your secure voting account</p>
+                  <small className="text-secondary">
+                    Verify your mobile number with OTP, then complete Aadhaar-based registration.
+                  </small>
                 </div>
-              </div>
 
-              <div className="col-md-6">
-                <label className="form-label" htmlFor="aadhaar">
-                  Aadhaar number
-                </label>
-                <input
-                  className={`form-control ${validationErrors.aadhaar ? 'is-invalid' : ''}`}
-                  id="aadhaar"
-                  maxLength="12"
-                  name="aadhaar"
-                  onChange={updateField}
-                  placeholder="12-digit Aadhaar"
-                  required
-                  type="text"
-                  value={formData.aadhaar}
-                />
-                {validationErrors.aadhaar ? (
-                  <div className="invalid-feedback">{validationErrors.aadhaar}</div>
-                ) : null}
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label" htmlFor="dob">
-                  Date of Birth (Must be 18+)
-                </label>
-                <input
-                  className={`form-control ${validationErrors.dob ? 'is-invalid' : ''}`}
-                  id="dob"
-                  max={new Date().toISOString().split('T')[0]}
-                  name="dob"
-                  onChange={updateField}
-                  required
-                  type="date"
-                  value={formData.dob}
-                />
-                {validationErrors.dob ? (
-                  <div className="invalid-feedback">{validationErrors.dob}</div>
-                ) : null}
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label" htmlFor="state">
-                  State
-                </label>
-                <select
-                  className="form-control"
-                  id="state"
-                  name="state"
-                  onChange={updateField}
-                  required
-                  value={formData.state}
-                >
-                  <option value="">Select your voting state</option>
-                  {stateOptions.map((state) => (
-                    <option key={state} value={state}>
-                      {state}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col-12">
-                <label className="form-label" htmlFor="password">
-                  Password
-                </label>
-                <input
-                  className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
-                  id="password"
-                  name="password"
-                  onChange={updateField}
-                  placeholder="Minimum 8 characters"
-                  required
-                  type="password"
-                  value={formData.password}
-                />
-                {validationErrors.password ? (
-                  <div className="invalid-feedback">{validationErrors.password}</div>
-                ) : null}
-              </div>
-
-              {otpSent ? (
-                <div className="col-12">
-                  <label className="form-label" htmlFor="otp">
-                    OTP
-                  </label>
-                  <div className="input-group">
-                    <input
-                      className="form-control"
-                      id="otp"
-                      maxLength="6"
-                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
-                      placeholder="Enter 6-digit OTP"
-                      type="text"
-                      value={otp}
-                    />
-                    <button
-                      className="btn btn-success"
-                      disabled={loadingAction === 'verify-otp' || !/^\d{6}$/.test(otp)}
-                      onClick={handleVerifyOtp}
-                      type="button"
-                    >
-                      {loadingAction === 'verify-otp' ? 'Verifying...' : 'Verify OTP'}
-                    </button>
+                {message.text && (
+                  <div className={`alert alert-${message.type} alert-dismissible fade show`} role="alert">
+                    <strong>{message.type === 'success' ? '✓ ' : '✕ '}</strong>
+                    {message.text}
                   </div>
-                  {otpVerified ? (
-                    <div className="form-text text-success">Phone number verified successfully.</div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+                )}
 
-            <div className="d-grid gap-2 mt-4">
-              <button
-                className="btn btn-primary btn-lg"
-                disabled={
-                  loadingAction === 'register' ||
-                  !isFormComplete ||
-                  hasValidationErrors ||
-                  !otpVerified
-                }
-                type="submit"
-              >
-                {loadingAction === 'register' ? 'Creating account...' : 'Complete Registration'}
-              </button>
-            </div>
+                <form onSubmit={handleRegister} noValidate>
+                  {/* Full Name */}
+                  <div className="mb-4">
+                    <label htmlFor="name" className="form-label fw-semibold">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control form-control-lg"
+                      id="name"
+                      name="name"
+                      placeholder="Enter your full name"
+                      onChange={updateField}
+                      value={formData.name}
+                      required
+                    />
+                    {validationErrors.name && (
+                      <div className="invalid-feedback d-block">{validationErrors.name}</div>
+                    )}
+                  </div>
 
-            <p className="text-secondary text-center mt-4 mb-0">
-              Already registered? <Link to="/login">Login here</Link>
-            </p>
-          </form>
+                  {/* Email */}
+                  <div className="mb-4">
+                    <label htmlFor="email" className="form-label fw-semibold">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      className="form-control form-control-lg"
+                      id="email"
+                      name="email"
+                      placeholder="name@example.com"
+                      onChange={updateField}
+                      value={formData.email}
+                      required
+                    />
+                    {validationErrors.email && (
+                      <div className="invalid-feedback d-block">{validationErrors.email}</div>
+                    )}
+                  </div>
+
+                  {/* Phone & OTP */}
+                  <div className="mb-4">
+                    <label htmlFor="phone" className="form-label fw-semibold">
+                      Phone Number
+                    </label>
+                    <div className="input-group input-group-lg">
+                      <input
+                        type="text"
+                        className={`form-control ${validationErrors.phone ? 'is-invalid' : ''}`}
+                        id="phone"
+                        name="phone"
+                        placeholder="10-digit mobile number"
+                        maxLength="10"
+                        onChange={updateField}
+                        value={formData.phone}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={handleSendOtp}
+                        disabled={loadingAction === 'send-otp' || !/^\d{10}$/.test(formData.phone)}
+                      >
+                        {loadingAction === 'send-otp' ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Sending...
+                          </>
+                        ) : (
+                          'Send OTP'
+                        )}
+                      </button>
+                    </div>
+                    {validationErrors.phone && (
+                      <div className="invalid-feedback d-block">{validationErrors.phone}</div>
+                    )}
+                  </div>
+
+                  {/* OTP Verification Section */}
+                  {otpSent && (
+                    <div className="mb-4 p-3 bg-light rounded border border-info">
+                      <div className="mb-3">
+                        <label htmlFor="otp" className="form-label fw-semibold">
+                          Enter OTP
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control form-control-lg"
+                          id="otp"
+                          placeholder="Enter 6-digit OTP"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                          maxLength="6"
+                          required
+                        />
+                        <small className="text-muted d-block mt-2">
+                          Check your browser console or backend logs for the OTP
+                        </small>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-success w-100 btn-lg"
+                        onClick={handleVerifyOtp}
+                        disabled={loadingAction === 'verify-otp' || !/^\d{6}$/.test(otp)}
+                      >
+                        {loadingAction === 'verify-otp' ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Verifying...
+                          </>
+                        ) : (
+                          'Verify OTP'
+                        )}
+                      </button>
+
+                      {otpVerified && (
+                        <div className="mt-3 alert alert-success mb-0" role="alert">
+                          <strong>✓ Phone Verified</strong> - You can now proceed with registration
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Aadhaar */}
+                  <div className="mb-4">
+                    <label htmlFor="aadhaar" className="form-label fw-semibold">
+                      Aadhaar Number
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-control form-control-lg ${validationErrors.aadhaar ? 'is-invalid' : ''}`}
+                      id="aadhaar"
+                      name="aadhaar"
+                      placeholder="12-digit Aadhaar number"
+                      maxLength="12"
+                      onChange={updateField}
+                      value={formData.aadhaar}
+                      required
+                    />
+                    {validationErrors.aadhaar && (
+                      <div className="invalid-feedback d-block">{validationErrors.aadhaar}</div>
+                    )}
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div className="mb-4">
+                    <label htmlFor="dob" className="form-label fw-semibold">
+                      Date of Birth (Must be 18+)
+                    </label>
+                    <input
+                      type="date"
+                      className={`form-control form-control-lg ${validationErrors.dob ? 'is-invalid' : ''}`}
+                      id="dob"
+                      name="dob"
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={updateField}
+                      value={formData.dob}
+                      required
+                    />
+                    {validationErrors.dob && (
+                      <div className="invalid-feedback d-block">{validationErrors.dob}</div>
+                    )}
+                  </div>
+
+                  {/* State */}
+                  <div className="mb-4">
+                    <label htmlFor="state" className="form-label fw-semibold">
+                      Voting State
+                    </label>
+                    <select
+                      className="form-select form-select-lg"
+                      id="state"
+                      name="state"
+                      onChange={updateField}
+                      value={formData.state}
+                      required
+                    >
+                      <option value="">Select your voting state</option>
+                      {stateOptions.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Password */}
+                  <div className="mb-5">
+                    <label htmlFor="password" className="form-label fw-semibold">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      className={`form-control form-control-lg ${validationErrors.password ? 'is-invalid' : ''}`}
+                      id="password"
+                      name="password"
+                      placeholder="Minimum 8 characters"
+                      onChange={updateField}
+                      value={formData.password}
+                      required
+                    />
+                    {validationErrors.password && (
+                      <div className="invalid-feedback d-block">{validationErrors.password}</div>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-lg w-100 mb-3"
+                    disabled={
+                      loadingAction === 'register' ||
+                      !isFormComplete ||
+                      hasValidationErrors ||
+                      !otpVerified
+                    }
+                  >
+                    {loadingAction === 'register' ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Creating account...
+                      </>
+                    ) : (
+                      'Complete Registration'
+                    )}
+                  </button>
+
+                  {/* Login Link */}
+                  <div className="text-center">
+                    <p className="text-muted mb-0">
+                      Already registered?{' '}
+                      <Link to="/login" className="fw-semibold text-primary text-decoration-none">
+                        Login here
+                      </Link>
+                    </p>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

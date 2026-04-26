@@ -9,6 +9,7 @@ import config from './config/env.js';
 import adminRoutes from './routes/adminRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import candidateRoutes from './routes/candidateRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
 import healthRoutes from './routes/health.routes.js';
 import resultsRoutes from './routes/resultsRoutes.js';
 import voteRoutes from './routes/voteRoutes.js';
@@ -47,6 +48,7 @@ if (config.nodeEnv !== 'test') {
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/candidates', candidateRoutes);
+app.use('/api/complaints', complaintRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/health', healthRoutes);

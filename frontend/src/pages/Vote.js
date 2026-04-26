@@ -10,6 +10,11 @@ const Vote = () => {
   const [voting, setVoting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  // Search and filter states
+  const [search, setSearch] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedParty, setSelectedParty] = useState('');
+
   const user = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('votingUser') || '{}');
@@ -21,9 +26,33 @@ const Vote = () => {
   const userState = user.state || '';
   const [hasVoted, setHasVoted] = useState(Boolean(user.hasVoted));
 
+  // Get unique states and parties from candidates
+  const states = useMemo(() => {
+    const uniqueStates = Array.from(new Set(candidates.map((c) => c.state)));
+    return uniqueStates.sort();
+  }, [candidates]);
+
+  const parties = useMemo(() => {
+    const uniqueParties = Array.from(new Set(candidates.map((c) => c.party)));
+    return uniqueParties.sort();
+  }, [candidates]);
+
+  // Enhanced filtering with search and filters
   const filteredCandidates = useMemo(() => {
-    return candidates.filter((candidate) => candidate.state === user.state);
-  }, [candidates, user.state]);
+    return candidates.filter((candidate) => {
+      // Always filter by user's registered state
+      if (candidate.state !== user.state) return false;
+
+      // Apply additional filters if selected
+      if (selectedState && candidate.state !== selectedState) return false;
+      if (selectedParty && candidate.party !== selectedParty) return false;
+
+      // Apply search filter
+      if (search && !candidate.name.toLowerCase().includes(search.toLowerCase())) return false;
+
+      return true;
+    });
+  }, [candidates, user.state, selectedState, selectedParty, search]);
 
   const getPartySymbol = (candidate) => {
     return candidate.partySymbol || '/images/jsp-party.jpg';
@@ -121,7 +150,7 @@ const Vote = () => {
       <div className="row g-4">
         <div className="col-lg-8">
           <section className="auth-panel p-4">
-            <div className="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+            <div className="d-flex flex-column flex-md-row justify-content-between gap-2 mb-4">
               <div>
                 <h2 className="h5 fw-semibold mb-1">Candidates</h2>
                 <p className="text-secondary mb-0">
@@ -131,11 +160,57 @@ const Vote = () => {
               {hasVoted ? <span className="badge text-bg-success align-self-start">Already voted</span> : null}
             </div>
 
+            {/* Search and Filter Controls */}
+            <div className="row g-3 mb-4">
+              <div className="col-md-12">
+                <input
+                  className="form-control"
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search candidates by name..."
+                  type="text"
+                  value={search}
+                />
+              </div>
+              <div className="col-md-6">
+                <select
+                  className="form-control"
+                  onChange={(e) => setSelectedState(e.target.value)}
+                  value={selectedState}
+                >
+                  <option value="">All states in your region</option>
+                  {states.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-md-6">
+                <select
+                  className="form-control"
+                  onChange={(e) => setSelectedParty(e.target.value)}
+                  value={selectedParty}
+                >
+                  <option value="">All parties</option>
+                  {parties.map((party) => (
+                    <option key={party} value={party}>
+                      {party}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {loading ? (
               <div className="text-secondary py-4">Loading candidates...</div>
             ) : (
-              <div className="candidate-grid">
-                {filteredCandidates.map((candidate) => (
+              <>
+                <div className="text-secondary small mb-3">
+                  Showing {filteredCandidates.length} candidate{filteredCandidates.length !== 1 ? 's' : ''} from{' '}
+                  {candidates.length} total
+                </div>
+                <div className="candidate-grid">
+                  {filteredCandidates.map((candidate) => (
                   <article
                     className={`candidate-card ${selectedCandidateId === candidate._id ? 'selected' : ''}`}
                     key={candidate._id}
@@ -174,7 +249,8 @@ const Vote = () => {
                     </button>
                   </article>
                 ))}
-              </div>
+                </div>
+              </>
             )}
 
             <div className="d-grid d-sm-flex gap-2 mt-4">

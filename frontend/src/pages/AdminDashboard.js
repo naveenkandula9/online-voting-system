@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 
 import api from '../services/api';
 
+const STATES = ['Andhra Pradesh', 'Telangana'];
+
 const emptyCandidate = {
   name: '',
   party: '',
+  partySymbol: '',
   state: '',
 };
 
@@ -12,6 +15,7 @@ const AdminDashboard = () => {
   const [candidates, setCandidates] = useState([]);
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [complaints, setComplaints] = useState([]);
   const [results, setResults] = useState({ totalVotes: 0, stateWiseResults: [] });
   const [election, setElection] = useState(null);
   const [candidateForm, setCandidateForm] = useState(emptyCandidate);
@@ -26,13 +30,14 @@ const AdminDashboard = () => {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [candidateResponse, userResponse, logResponse, resultResponse, electionResponse] =
+      const [candidateResponse, userResponse, logResponse, resultResponse, electionResponse, complaintResponse] =
         await Promise.all([
           api.get('/api/candidates'),
           api.get('/api/admin/users'),
           api.get('/api/admin/logs'),
           api.get('/api/results'),
           api.get('/api/admin/election'),
+          api.get('/api/complaints/admin/all'),
         ]);
 
       setCandidates(candidateResponse.data.candidates || []);
@@ -43,6 +48,7 @@ const AdminDashboard = () => {
         stateWiseResults: resultResponse.data.stateWiseResults || [],
       });
       setElection(electionResponse.data.election || null);
+      setComplaints(complaintResponse.data.complaints || []);
     } catch (error) {
       setMessage({ type: 'danger', text: error.message });
     } finally {
@@ -71,8 +77,16 @@ const AdminDashboard = () => {
   const saveCandidate = async (event) => {
     event.preventDefault();
 
-    if (!candidateForm.name.trim() || !candidateForm.party.trim() || !candidateForm.state.trim()) {
-      setMessage({ type: 'danger', text: 'Candidate name, party, and state are required.' });
+    if (
+      !candidateForm.name.trim() ||
+      !candidateForm.party.trim() ||
+      !candidateForm.state.trim() ||
+      !candidateForm.partySymbol.trim()
+    ) {
+      setMessage({
+        type: 'danger',
+        text: 'Candidate name, party, party symbol, and state are required.',
+      });
       return;
     }
 
@@ -102,6 +116,7 @@ const AdminDashboard = () => {
     setCandidateForm({
       name: candidate.name,
       party: candidate.party,
+      partySymbol: candidate.partySymbol,
       state: candidate.state,
     });
   };
@@ -136,6 +151,16 @@ const AdminDashboard = () => {
       const response = await api.post('/api/admin/election/stop');
       setElection(response.data.election);
       setMessage({ type: 'success', text: 'Election stopped.' });
+      await fetchAdminData();
+    } catch (error) {
+      setMessage({ type: 'danger', text: error.message });
+    }
+  };
+
+  const updateComplaintStatus = async (complaintId, newStatus) => {
+    try {
+      await api.put(`/api/complaints/${complaintId}/status`, { status: newStatus });
+      setMessage({ type: 'success', text: 'Complaint status updated.' });
       await fetchAdminData();
     } catch (error) {
       setMessage({ type: 'danger', text: error.message });
@@ -238,17 +263,37 @@ const AdminDashboard = () => {
                     value={candidateForm.party}
                   />
                 </div>
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="candidateSymbol">
+                    Party Symbol (Image URL)
+                  </label>
+                  <input
+                    className="form-control"
+                    id="candidateSymbol"
+                    name="partySymbol"
+                    onChange={updateCandidateField}
+                    placeholder="e.g., /images/bjp.jpg"
+                    value={candidateForm.partySymbol}
+                  />
+                </div>
                 <div className="mb-4">
                   <label className="form-label" htmlFor="candidateState">
                     State
                   </label>
-                  <input
+                  <select
                     className="form-control"
                     id="candidateState"
                     name="state"
                     onChange={updateCandidateField}
                     value={candidateForm.state}
-                  />
+                  >
+                    <option value="">Select a state</option>
+                    {STATES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="d-grid gap-2">
                   <button className="btn btn-primary" disabled={saving} type="submit">
@@ -272,6 +317,7 @@ const AdminDashboard = () => {
                       <tr>
                         <th>Name</th>
                         <th>Party</th>
+                        <th>Symbol</th>
                         <th>State</th>
                         <th className="text-end">Votes</th>
                         <th className="text-end">Actions</th>
@@ -282,6 +328,13 @@ const AdminDashboard = () => {
                         <tr key={candidate._id}>
                           <td className="fw-semibold">{candidate.name}</td>
                           <td>{candidate.party}</td>
+                          <td>
+                            <img
+                              alt={candidate.party}
+                              src={candidate.partySymbol || '/images/default-party.png'}
+                              style={{ height: '30px', width: '30px', objectFit: 'contain' }}
+                            />
+                          </td>
                           <td>{candidate.state}</td>
                           <td className="text-end">{candidate.voteCount}</td>
                           <td className="text-end">
@@ -347,6 +400,62 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="auth-panel p-4">
+            <h2 className="h5 fw-semibold mb-3">User Complaints</h2>
+            {complaints.length === 0 ? (
+              <div className="text-secondary">No complaints submitted yet.</div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Complaint</th>
+                      <th>Status</th>
+                      <th>Submitted</th>
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {complaints.map((complaint) => (
+                      <tr key={complaint._id}>
+                        <td className="fw-semibold">{complaint.user?.name}</td>
+                        <td>
+                          <small>{complaint.message.substring(0, 50)}...</small>
+                        </td>
+                        <td>
+                          <select
+                            className="form-select form-select-sm"
+                            onChange={(e) => updateComplaintStatus(complaint._id, e.target.value)}
+                            value={complaint.status}
+                          >
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                          </select>
+                        </td>
+                        <td>
+                          <small className="text-secondary">
+                            {new Date(complaint.createdAt).toLocaleDateString()}
+                          </small>
+                        </td>
+                        <td className="text-end">
+                          <button
+                            className="btn btn-outline-info btn-sm"
+                            title={complaint.message}
+                            type="button"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </div>
       )}

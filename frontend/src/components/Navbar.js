@@ -37,6 +37,9 @@ const Navbar = () => {
             <NavLink className="nav-link" to="/results">
               Results
             </NavLink>
+            <NavLink className="nav-link" to="/complaint">
+              Complaint
+            </NavLink>
             <NavLink className="nav-link" to="/admin">
               Admin
             </NavLink>

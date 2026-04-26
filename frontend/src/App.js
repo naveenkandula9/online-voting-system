@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
+import RaiseComplaint from './pages/RaiseComplaint';
 import Register from './pages/Register';
 import Results from './pages/Results';
 import Vote from './pages/Vote';
@@ -25,6 +26,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/vote" element={<Vote />} />
+            <Route path="/complaint" element={<RaiseComplaint />} />
           </Route>
 
           <Route element={<AdminRoute />}>

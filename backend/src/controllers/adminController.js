@@ -6,6 +6,7 @@ import Candidate from '../models/Candidate.js';
 import Election from '../models/Election.js';
 import User from '../models/User.js';
 import { logActivity } from '../utils/activityLogger.js';
+import { sendResultEmail } from '../utils/mailer.js';
 
 const candidateSchema = z.object({
   name: z.string().trim().min(2, 'Candidate name must be at least 2 characters'),
@@ -238,6 +239,24 @@ export const stopElection = async (req, res, next) => {
       details: { electionId: election._id, endTime: election.endTime },
       req,
     });
+
+    // Get winner and send result emails to all users
+    try {
+      const winner = await Candidate.findOne().sort({ voteCount: -1 });
+      const users = await User.find();
+
+      if (winner && users.length > 0) {
+        for (const user of users) {
+          try {
+            await sendResultEmail(user.email, winner.name);
+          } catch (emailError) {
+            console.error(`Failed to send result email to ${user.email}:`, emailError.message);
+          }
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send result emails:', emailError.message);
+    }
 
     res.status(200).json({
       success: true,
